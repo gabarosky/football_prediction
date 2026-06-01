@@ -160,8 +160,6 @@ A classical chess-derived rating system adapted for international football.
 
 Each team carries a rating $R$. After every match, ratings are updated based on the expected vs. actual outcome:
 
-$$ R'_{\text{home}} = R_{\text{home}} + K \cdot (S - E) $$
-
 
 $$R_{\text{new}} = R_{\text{old}} + K \times (W - W_e)$$
 
