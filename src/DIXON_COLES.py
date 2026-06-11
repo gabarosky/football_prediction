@@ -226,10 +226,10 @@ class DixonColesModel:
         pe_b = np.ones(max_goals+1) @ sim_matrix @ np.arange(max_goals+1)
         pe_a = np.arange(max_goals+1) @sim_matrix @ np.ones(max_goals+1)
         
-        
-        prob_local = np.sum(np.tril(np.fliplr(sim_matrix), -1))
-        prob_empate=np.sum(np.diag(np.fliplr(sim_matrix)))#resultado.prob_empate,
-        prob_visita=np.sum(np.triu(np.fliplr(sim_matrix), 1))#resultado.prob_visita,
+        print(sim_matrix)
+        prob_empate = np.sum(np.diag(sim_matrix))       # diagonal principal (0-0, 1-1, 2-2)
+        prob_visita = np.sum(np.triu(sim_matrix, 1))    # triángulo superior (0-1, 0-2, 1-2)
+        prob_local  = np.sum(np.tril(sim_matrix, -1))#resultado.prob_visita,
         if prob_local > prob_empate and prob_local > prob_visita:
             resultado_predicho = 'Local'
         elif prob_visita > prob_local and prob_visita > prob_empate:
