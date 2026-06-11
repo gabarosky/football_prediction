@@ -193,7 +193,6 @@ class DixonColesModel:
         prob_matrix[1,1] *= (1 - self.rho)
   
         prob_matrix /= prob_matrix.sum()
-       
        # Montecarlo: n_simulations
         plain_results = prob_matrix.flatten()
         indices = np.random.choice(

@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 from datetime import datetime
+from scipy.stats import poisson
 from scipy.optimize import minimize
 
 # --- LOGGING SETUP ---
@@ -103,6 +104,95 @@ class EloModel:
             
         }
         return val
+    
+    
+    
+    
+    def simular_n_partidos(self, home_team, away_team, n_sims,
+                                max_goals=8, neutral = True):
+        """ Calculate expected goals (lambda) based on Elo difference."""
+        max_goals = 8
+        elo_a = self.get_rating(home_team)
+        elo_b = self.get_rating(away_team)
+        diff = elo_a - elo_b
+        avg_goals=1.3
+        rng = np.random.default_rng()
+        lambda_a = avg_goals * (1 / (1 + 10**(-diff / 400)))
+        lambda_b = avg_goals * (1 / (1 + 10**(diff / 400)))
+    
+        sample_size = max(10 * n_sims, 10000)
+        goals_a = rng.poisson(lambda_a, sample_size)
+        goals_b = rng.poisson(lambda_b, sample_size)
+        # goals_a = rng.poisson(lambda_a, 1)
+        # goals_b = rng.poisson(lambda_b, 1)
+        A, _, _ = np.histogram2d(
+            goals_a, goals_b, 
+            bins=(np.arange(max_goals + 2), np.arange(max_goals + 2))
+            )
+        
+     
+        
+        prob_matrix = A/A.sum()
+       
+       # Montecarlo: n_simulations
+        plain_results = prob_matrix.flatten()
+        indices = np.random.choice(
+           range(len(plain_results)), 
+           size=n_sims, 
+           p=plain_results
+           )
+   
+       # convert index to scores
+        matrix_size = max_goals +1
+        score_h, score_a = np.divmod(indices, matrix_size)
+   
+        
+        matriz_frecuencias = np.zeros((matrix_size, matrix_size), dtype=int)
+
+# 2. Sumamos 1 en cada coordenada simulada (fuerza bruta vectorial de NumPy)
+        np.add.at(matriz_frecuencias, (score_h, score_a), 1)
+
+# [Opcional] Si querés la matriz de probabilidades simuladas para comparar con la original:
+        sim_matrix = matriz_frecuencias / matriz_frecuencias.sum()
+   
+        max_frecuencia = np.max(sim_matrix)
+
+    # 2. Encontrar la fila (goles local) y columna (goles visitante) de ese máximo
+        fila_goles_h, col_goles_a = np.unravel_index(np.argmax(matriz_frecuencias), matriz_frecuencias.shape)
+       
+        np.sum(np.tril(prob_matrix, -1)), np.sum(np.diag(prob_matrix)),
+        
+        e_b = np.ones(max_goals+1) @ prob_matrix @ np.arange(max_goals+1)
+        e_a = np.arange(max_goals+1) @prob_matrix @ np.ones(max_goals+1)
+        
+        pe_b = np.ones(max_goals+1) @ sim_matrix @ np.arange(max_goals+1)
+        pe_a = np.arange(max_goals+1) @sim_matrix @ np.ones(max_goals+1)
+        
+        
+        prob_local=np.sum(np.triu(sim_matrix, -1))#resultado.prob_local,
+        prob_empate=np.sum(np.diag(sim_matrix))#resultado.prob_empate,
+        prob_visita=np.sum(np.triu(sim_matrix, 1))#resultado.prob_visita,
+        if prob_local > prob_empate and prob_local > prob_visita:
+            resultado_predicho = 'Local'
+        elif prob_visita > prob_local and prob_visita > prob_empate:
+            resultado_predicho = 'Visitante'
+        else:
+            resultado_predicho = 'Empate'
+        
+        val= {
+           "prob_matrix"   : prob_matrix, #resultado.matriz,
+           "resultado_esp" : (e_a,e_b),#resultado.resultado_esperado,
+           "resultado_pred": (pe_a,pe_b),
+           "moda"          : (fila_goles_h, col_goles_a ),#resultado.moda,
+           "prob_moda"     : max_frecuencia,#resultado.prob_moda,
+           "ganador"       : resultado_predicho,#resultado.ganador,
+           "prob_local"    : np.sum(np.triu(prob_matrix, -1)),#resultado.prob_local,
+           "prob_empate"   : np.sum(np.diag(prob_matrix)),#resultado.prob_empate,
+           "prob_visita"   : np.sum(np.triu(prob_matrix, 1)),#resultado.prob_visita,
+        }
+        
+        return val
+    
 
     def simulate_match_montecarlo(self,home_team, away_team,rng ,n_times, avg_goals=1.3):
         max_goals = 8

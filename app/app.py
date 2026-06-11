@@ -166,7 +166,6 @@ def run_simulation(model_name: str, team_a: str, team_b: str, n_sims: int):
     rng= np.random.default_rng()
     if n_sims == 1:
         resultado = model.simulate_match(team_a, team_b,rng)
-        print('aca')
     else:
         resultado = model.simular_n_partidos(team_a, team_b, n_sims)
 
@@ -297,8 +296,8 @@ def main():
         st.markdown("---")
 
         st.markdown("**Teams**")
-        default_a = teams.index("Argentina") if "Argentina" in teams else 0
-        default_b = teams.index("Brasil") if "Brasil" in teams else 1
+        default_a = teams.index("Mexico") if "Mexico" in teams else 0
+        default_b = teams.index("South Africa") if "South Africa" in teams else 1
         team_a = st.selectbox("🏠 Home",     teams, index=default_a, key="team_a")
         team_b = st.selectbox("✈️ Away", teams, index=default_b, key="team_b")
 
@@ -362,9 +361,9 @@ def main():
     ga, gb  = result["resultado_esp"]
     moda    = result["moda"]
     ganador = result["ganador"]
-    print(ganador)
+    
     ganador_texto = cfg["team_a"] if ganador == "Local" else (cfg["team_b"] if ganador == "Visitante" else "Empate")
-    print(ganador_texto)
+    
     # ── Scoreboard ──
     st.markdown(f"""
         <div class="scoreboard">
