@@ -35,7 +35,6 @@ This project builds a modular prediction and simulation engine for the **2026 FI
 - A **Monte Carlo simulation engine** capable of running thousands of full-tournament simulations and producing championship probability distributions.
 - A future **interactive Streamlit app** where users can pick any model, simulate the full tournament or a single match, and explore the results visually.
 
-The codebase is deliberately designed around a common interface (`BaseFootballModel`) so that every model is a drop-in replacement for any other — adding a new model requires touching only two files.
 
 ---
 
@@ -43,14 +42,13 @@ The codebase is deliberately designed around a common interface (`BaseFootballMo
 
 | Component | Status | Notebook |
 |---|---|---|
-| Data collection & cleaning | ✅ Done | `00_data_collection.ipynb` |
 | Exploratory Data Analysis | ✅ Done | `01_EDA.ipynb` |
-| ELO Rating System | 🔄 In progress | `02_ELO.ipynb` |
-| Dixon-Coles Model | 🔄 In progress | `03_Dixon_Coles.ipynb` |
+| ELO Rating System | ✅ Done | `02_ELO.ipynb` |
+| Dixon-Coles Model | ✅ Done | `03_Dixon_Coles.ipynb` |
 | Own Model v1 | 🔲 Planned | `04_Own_v1.ipynb` |
 | Own Model v2 | 🔲 Planned | `05_Own_v2.ipynb` |
 | Model comparison & evaluation | 🔲 Planned | `06_Model_Comparison.ipynb` |
-| Streamlit app | 🔲 Planned | `app/` |
+| Streamlit app | 🔄 in progress | `app/` |
 
 ---
 
@@ -62,42 +60,34 @@ wc2026-prediction/
 ├── data/
 │   ├── raw/                        # Original downloaded datasets
 │   │   ├── former_names.csv
+│   │   ├── results.csv
 │   │   ├── teams.csv
-│   │   └── results.csv
-│   ├── processed/                  # Cleaned, feature-engineered data
-│   │   ├── results.parquet
-│   │   └── wc2026_groups.csv
-│   └── results/                    # Model outputs & simulation results
-│       ├── elo_ratings.csv
-│       ├── dixon_coles_strengths.csv
-│       └── monte_carlo_summary.csv
+│   │   ├── wc2026_groups.csv
+│   │   └── wc_2026_third_place_table.csv
+│   └── processed/                  # Cleaned, feature-engineered data
+│       ├── wc_teams.csv
+│       ├── results.parquet
+│       └── wc2026_groups.csv
 │
 ├── notebooks/
-│   ├── 00_data_collection.ipynb
 │   ├── 01_EDA.ipynb                 ✅
-│   ├── 02_ELO.ipynb                 🔄
-│   ├── 03_Dixon_Coles.ipynb         🔄
-│   ├── 04_Own_v1.ipynb              🔄
+│   ├── 02_ELO.ipynb                 ✅
+│   ├── 03_Dixon_Coles.ipynb         ✅
+│   ├── 04_Own_v1.ipynb              🔲
 │   ├── 05_Own.ipynb                 🔲
-│   └── 06_Model_Comparison.ipynb    🔲
+│   └── 06_Model_Comparison.ipynb    🔄
 │
-├── football_predictor/             # Core Python package
-│   ├── base_model.py               # Abstract interface — the scalability contract
-│   ├── trainer.py                  # Train / save / load any registered model
-│   ├── predictor.py                # Single-match forecasts with rich output
-│   ├── simulator.py                # Full tournament Monte Carlo engine
-│   ├── wc2026_fixture.py           # Official WC 2026 groups & fixture
-│   └── models/
-│       ├── dixon_coles.py          ✅
-│       ├── elo.py                  🔄
-│       ├── pagerank_v1.py          🔲
-│       └── pagerank_v2.py          🔲
+├── src/                       # Core Python package
+│   ├── Clean.py               # Script for data cleaning
+│   ├── DIXON_COLES.py         # Train / save / load Dixon-Coles model and class
+│   ├── ELO.py                 # Train / save / load ELO based model and class
+│   └── WCSimulator.py         # Functions for WC2026 simulation
 │
-├── saved_models/                   # Serialized trained models (.json.gz)
+├── saved_models/                   # Serialized trained │   │   ├── dixoncoles_model_v1.pkl
+│   └── elo_model_v1.pkl
 │
 ├── app/                            # Streamlit application (coming soon)
-│   ├── app.py
-│   └── components/
+│   └── app.py
 │
 ├── requirements.txt
 └── README.md
@@ -110,7 +100,6 @@ wc2026-prediction/
 | Dataset | Description | Source |
 |---|---|---|
 | International match results | ~45,000 matches since 1872 | [Kaggle — International Football Results](https://www.kaggle.com/datasets/martj42/international-football-results-from-1872-to-2017) |
-| WC 2026 groups | Official draw, December 2024 | FIFA |
 
 <!-- **Training window:** matches from **2018 to present**, weighted by recency. Competitive matches (World Cup, Copa América, UEFA Nations League, etc.) are given higher weight than friendlies. --->
 
@@ -167,7 +156,7 @@ where $W$ is the result ($1$ for local win, $0.5$ for a draw and $0$ for visitor
 
 **Key design choices**
 - Starting ratings are estimated with matches previous to FIFA WC 2018.
-- Parameteres otimized for period FIFA WC 2018 to FICA WC 2022.
+- Parameteres otimized for period FIFA WC 2018 to FIFA WC 2022.
 - In WC the home advantage is fixed to 0.
 - Match outcome is encoded as 1 / 0.5 / 0 (win / draw / loss).
 
@@ -282,22 +271,19 @@ df_probs = sim.monte_carlo(n_sim=50_000)
 
 ## Streamlit App *(coming soon)*
 
-> 📦 `app/` | 🔲 Status: Planned
+> 📦 `app/` | 🔄 Status: in progress
 
 An interactive web application where users can:
 
-**Simulate the full tournament**
-- Select any trained model (ELO, Dixon-Coles, PageRank v1/v2).
+**Simulate the full tournament** 🔲 Planned
+- Select any trained model (ELO, Dixon-Coles, ...).
 - Run N Monte Carlo simulations (slider: 1,000 – 100,000).
 - Visualize championship probability distributions, bracket heatmaps, and group stage pass-through rates.
 
-**Simulate a single match**
+**Simulate a single match** 🟢  Done
 - Choose home and away team from dropdowns.
 - Select model.
 - See the probability of each outcome, expected goals, and the most likely scorelines as a heatmap.
-
-**Compare models**
-- Side-by-side view of probability estimates from multiple models for the same match or tournament stage.
 
 ---
 
@@ -389,8 +375,8 @@ See `football_predictor/nuevo_modelo_template.py` for a fully annotated template
 
 ### Evaluation methodology
 
-Models are evaluated on held-out matches (2024–2025) using:
-<!--
+Models are evaluated on held-out matches (2022–2025) using:
+
 | Metric | Description |
 |---|---|
 | **RPS** (Ranked Probability Score) | Measures calibration across all three outcomes. Lower is better. Naive baseline: ~0.250. |
@@ -402,29 +388,28 @@ Models are evaluated on held-out matches (2024–2025) using:
 
 | Model | RPS | Brier | Log Loss | Accuracy |
 |---|---|---|---|---|
-| Naive baseline (1/3 each) | 0.250 | — | — | — |
-| ELO | — | — | — | — |
-| Dixon-Coles | — | — | — | — |
+| Naive baseline (1/3 each) | 0.2778|0.6667|	1.0986|	0.3333 |
+| ELO | 0.1719	|0.5126	|0.8729	|0.6048	|1.2594|
+|Dixon-Coles	|0.1676	|0.5017	|0.8576	|0.6090|	1.2372|
+
+<!---
 | PageRank v1 | — | — | — | — |
 | PageRank v2 | — | — | — | — |
--->
+--->
 ---
 
 ## Roadmap
 
 - [x] Data collection and cleaning pipeline
 - [x] Exploratory Data Analysis (EDA)
-- [ ] ELO model — training, evaluation, serialization
-- [ ] Dixon-Coles model — training, evaluation, serialization
-- [ ] Modular prediction engine (`BaseFootballModel` interface)
-- [ ] Monte Carlo tournament simulator
-- [ ] ELO integrated into the `football_predictor` package
+- [x] ELO model — training, evaluation, serialization
+- [x] Dixon-Coles model — training, evaluation, serialization
+- [x] Monte Carlo tournament simulator
 - [ ] Own v1 model
 - [ ] Own v2 model 
-- [ ] Model evaluation notebook with RPS / Brier comparison
-- [ ] Streamlit app — match predictor
+- [x] Model evaluation notebook with RPS / Brier comparison
+- [x] Streamlit app — match predictor
 - [ ] Streamlit app — tournament simulator
-- [ ] Streamlit app — model comparison view
 - [ ] Docker deployment
 
 ---
@@ -435,8 +420,8 @@ Models are evaluated on held-out matches (2024–2025) using:
 - Elo, A.E. (1978). *The Rating of Chessplayers, Past and Present*. Arco Publishing.
 <!-- - Page, L., Brin, S., Motwani, R., & Winograd, T. (1999). *The PageRank Citation Ranking: Bringing Order to the Web*. Stanford InfoLab. -->
 - Maher, M.J. (1982). *Modelling Association Football Scores*. Statistica Neerlandica, 36(3), 109–118.
-- Constantinou, A.C. & Fenton, N.E. (2013). *Determining the level of ability of football teams by dynamic ratings based on the relative discrepancies in scores between adversaries*. Journal of Quantitative Analysis in Sports.
-
+<!-- - - Constantinou, A.C. & Fenton, N.E. (2013). *Determining the level of ability of football teams by dynamic ratings based on the relative discrepancies in scores between adversaries*. Journal of Quantitative Analysis in Sports.
+-->
 ---
 
 <p align="center">
