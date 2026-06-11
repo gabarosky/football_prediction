@@ -186,9 +186,9 @@ class EloModel:
            "moda"          : (fila_goles_h, col_goles_a ),#resultado.moda,
            "prob_moda"     : max_frecuencia,#resultado.prob_moda,
            "ganador"       : resultado_predicho,#resultado.ganador,
-           "prob_local"    : np.sum(np.triu(prob_matrix, -1)),#resultado.prob_local,
-           "prob_empate"   : np.sum(np.diag(prob_matrix)),#resultado.prob_empate,
-           "prob_visita"   : np.sum(np.triu(prob_matrix, 1)),#resultado.prob_visita,
+           "prob_local"    : prob_local,#resultado.prob_local,
+           "prob_empate"   : prob_empate,#resultado.prob_empate,
+           "prob_visita"   : prob_visita#resultado.prob_visita,
         }
         
         return val
