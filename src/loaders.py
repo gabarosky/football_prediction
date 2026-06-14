@@ -12,3 +12,8 @@ def load_dc():
     return joblib.load(
         ROOT / "saved_models" / "dixoncoles_model_v1.pkl"
     )
+
+def load_cpr():
+    return joblib.load(
+        ROOT / "saved_models" / "CPR_model_v1.pkl"
+    )
