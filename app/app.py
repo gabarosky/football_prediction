@@ -112,31 +112,77 @@ hr { border-color: #1e3a5f !important; }
 # CARGA DE MODELOS Y EQUIPOS
 # ─────────────────────────────────────────────
 
+# @st.cache_resource
+# def load_models():
+#     import pickle
+#     from src.ELO import EloModel, ModelLoader as EloModelLoader
+#     from src.DIXON_COLES import DixonColesModel, ModelLoader as DCModelLoader
+#     from src.CPR import CPRModel, ModelLoader as CPRModelLoader
+#     from src.DPOP import DPOPModel, ModelLoader as DPOPModelLoader
+#     from src.loaders import load_elo, load_dc, load_cpr, load_dpop
+#     from pathlib import Path
+
+#     ROOT = Path(__file__).resolve().parents[1]
+
+#     elo_model_path = ROOT / "saved_models" / "elo_model_v2.pkl"
+#     dc_model_path  = ROOT / "saved_models" / "dixoncoles_model_v2.pkl"
+#     cpr_model_path  = ROOT / "saved_models" / "CPR_model_v2.pkl"
+#     dpop_model_path  = ROOT / "saved_models" / "DPOP_model_v2.pkl"
+    
+#     import __main__
+
+#     __main__.EloModel = EloModel
+#     __main__.DixonColesModel = DixonColesModel
+#     __main__.CPRModel = CPRModel
+#     __main__.DPOPModel = DPOPModel
+    
+#     with open(elo_model_path, 'rb') as f:
+#         elo_model = pickle.load(f)
+#     with open(dc_model_path, 'rb') as f:
+#         dc_model = pickle.load(f)        
+#     with open(cpr_model_path, 'rb') as f:
+#         cpr_model = pickle.load(f)        
+#     with open(dpop_model_path, 'rb') as f:
+#         dpop_model = pickle.load(f)        
+        
+#     return {
+#         "Elo — Bivariate Poisson": elo_model,
+#         "Dixon-Coles": dc_model,
+#         "CPR": cpr_model,
+#         "DPOP": dpop_model
+#     }
+    
 @st.cache_resource
 def load_models():
     import pickle
-    from src.ELO import EloModel, ModelLoader as EloModelLoader
-    from src.DIXON_COLES import DixonColesModel, ModelLoader as DCModelLoader
-    from src.CPR import CPRModel, ModelLoader as CPRModelLoader
-    from src.DPOP import DPOPModel, ModelLoader as DPOPModelLoader
-    from src.loaders import load_elo, load_dc, load_cpr, load_dpop
     from pathlib import Path
-
-    ROOT = Path(__file__).resolve().parents[1]
-
-    elo_model_path = ROOT / "saved_models" / "elo_model_v2.pkl"
-    dc_model_path  = ROOT / "saved_models" / "dixoncoles_model_v2.pkl"
-    cpr_model_path  = ROOT / "saved_models" / "CPR_model_v2.pkl"
-    dpop_model_path  = ROOT / "saved_models" / "DPOP_model_v2.pkl"
-    
+    import sys
     import __main__
-    from src.ELO import EloModel
 
+    # 1. Asegurar la ruta raíz dentro de la función de carga por si el hilo de cache se desvía
+    ROOT = Path(__file__).resolve().parents[1]
+    if str(ROOT) not in sys.path:
+        sys.path.insert(0, str(ROOT))
+
+    # 2. Importamos las clases explícitamente usando el path absoluto del proyecto
+    from src.ELO import EloModel
+    from src.DIXON_COLES import DixonColesModel
+    from src.CPR import CPRModel
+    from src.DPOP import DPOPModel
+
+    # 3. Mapeo preventivo en __main__ (Crucial para que pickle no busque rutas locales inexistentes)
     __main__.EloModel = EloModel
     __main__.DixonColesModel = DixonColesModel
     __main__.CPRModel = CPRModel
     __main__.DPOPModel = DPOPModel
     
+    # Definición de rutas a los archivos guardados
+    elo_model_path = ROOT / "saved_models" / "elo_model_v2.pkl"
+    dc_model_path  = ROOT / "saved_models" / "dixoncoles_model_v2.pkl"
+    cpr_model_path  = ROOT / "saved_models" / "CPR_model_v2.pkl"
+    dpop_model_path  = ROOT / "saved_models" / "DPOP_model_v2.pkl"
+    
+    # 4. Carga segura de los binarios
     with open(elo_model_path, 'rb') as f:
         elo_model = pickle.load(f)
     with open(dc_model_path, 'rb') as f:
@@ -152,8 +198,6 @@ def load_models():
         "CPR": cpr_model,
         "DPOP": dpop_model
     }
-    
-
 
 @st.cache_data
 def load_teams():
