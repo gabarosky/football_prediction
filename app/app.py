@@ -118,14 +118,16 @@ def load_models():
     from src.ELO import EloModel, ModelLoader as EloModelLoader
     from src.DIXON_COLES import DixonColesModel, ModelLoader as DCModelLoader
     from src.CPR import CPRModel, ModelLoader as CPRModelLoader
-    from src.loaders import load_elo, load_dc, load_cpr
+    from src.DPOP import DPOPModel, ModelLoader as DPOPModelLoader
+    from src.loaders import load_elo, load_dc, load_cpr, load_dpop
     from pathlib import Path
 
     ROOT = Path(__file__).resolve().parents[1]
 
-    elo_model_path = ROOT / "saved_models" / "elo_model_v1.pkl"
-    dc_model_path  = ROOT / "saved_models" / "dixoncoles_model_v1.pkl"
-    cpr_model_path  = ROOT / "saved_models" / "CPR_model_v1.pkl"
+    elo_model_path = ROOT / "saved_models" / "elo_model_v2.pkl"
+    dc_model_path  = ROOT / "saved_models" / "dixoncoles_model_v2.pkl"
+    cpr_model_path  = ROOT / "saved_models" / "CPR_model_v2.pkl"
+    dpop_model_path  = ROOT / "saved_models" / "DPOP_model_v2.pkl"
     
     import __main__
     from src.ELO import EloModel
@@ -133,18 +135,22 @@ def load_models():
     __main__.EloModel = EloModel
     __main__.DixonColesModel = DixonColesModel
     __main__.CPRModel = CPRModel
+    __main__.DPOPModel = DPOPModel
     
     with open(elo_model_path, 'rb') as f:
         elo_model = pickle.load(f)
     with open(dc_model_path, 'rb') as f:
         dc_model = pickle.load(f)        
-    with open(dc_model_path, 'rb') as f:
+    with open(cpr_model_path, 'rb') as f:
         cpr_model = pickle.load(f)        
+    with open(dpop_model_path, 'rb') as f:
+        dpop_model = pickle.load(f)        
         
     return {
         "Elo — Bivariate Poisson": elo_model,
         "Dixon-Coles": dc_model,
         "CPR": cpr_model,
+        "DPOP": dpop_model
     }
     
 
@@ -310,7 +316,7 @@ def main():
         st.markdown("---")
 
         st.markdown("**Simulation model**")
-        model_options = ["Elo — Bivariate Poisson", "Dixon-Coles","CPR"]
+        model_options = ["Elo — Bivariate Poisson", "Dixon-Coles","CPR","DPOP"]
         model_name = st.radio("", model_options, key="model")
 
         st.markdown("---")

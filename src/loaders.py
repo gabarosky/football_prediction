@@ -17,3 +17,8 @@ def load_cpr():
     return joblib.load(
         ROOT / "saved_models" / "CPR_model_v1.pkl"
     )
+
+def load_dpop():
+    return joblib.load(
+        ROOT / "saved_models" / "DPOP_model_v1.pkl"
+    )

@@ -71,7 +71,7 @@ def run_pipeline():
 
 # Correctly goes up one level, then into data/processed/
     INPUT_FILE = os.path.join(SCRIPT_DIR, "..", "data", "processed", "results.parquet")
-    MODEL_OUTPUT = Path(os.path.join(SCRIPT_DIR, "..", "saved_models", "elo_model_v1.pkl"))
+    MODEL_OUTPUT = Path(os.path.join(SCRIPT_DIR, "..", "saved_models", "elo_model_v2.pkl"))
     MODEL_OUTPUT.parent.mkdir(exist_ok=True)
 
     # 2. Load and Prepare
@@ -83,8 +83,8 @@ def run_pipeline():
     df['h_id'] = df['home_team'].map(team_to_id)
     df['a_id'] = df['away_team'].map(team_to_id)
     
-    WARMING_ELO = 18935
-    TRAIN_END = 21715
+    WARMING_ELO = 21715
+    TRAIN_END = 24165
     data_array = df.iloc[:TRAIN_END][['h_id', 'a_id', 'home_score', 'away_score']].values.astype(int)
     
     # 3. Optimize
@@ -114,6 +114,7 @@ def run_pipeline():
     # 5. Serialize Model
     # Note: We set HFA to 0 for neutral ground predictions in the final model state
     optimized_params = [best_params[0],best_params[1], best_params[2]] 
+    
     model_obj = EloModel(final_ratings, team_to_id, optimized_params)
     
     print(model_obj.__class__.__module__)

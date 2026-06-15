@@ -120,7 +120,7 @@ def dc_neg_log_like_with_grad(params, h_idx, a_idx, x, y, is_home, t_diff, n_tea
 def run_pipeline():
     # 1. Paths
     INPUT_FILE = os.path.join(SCRIPT_DIR, "..", "data", "processed", "results.parquet")
-    MODEL_OUTPUT = Path(os.path.join(SCRIPT_DIR, "..", "saved_models", "dixoncoles_model_v1.pkl"))
+    MODEL_OUTPUT = Path(os.path.join(SCRIPT_DIR, "..", "saved_models", "dixoncoles_model_v2.pkl"))
     MODEL_OUTPUT.parent.mkdir(exist_ok=True)
 
     # 2. Load and Prepare
@@ -143,7 +143,7 @@ def run_pipeline():
     bounds = ([(None, None)] * (2 * n_teams + 1)) + [(-0.15, 0.15)]
     
     xi=0.004
-    i= 21715
+    i= 24165
     h_idx_train = h_idx_all[:i]
     a_idx_train = a_idx_all[:i]
     x_train = h_goals_all[:i]

@@ -26,14 +26,15 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+
 # =========================================================================
-# 1. FUNCIÓN DE CONSTRUCCIÓN DE GRAFO BASADO EN GOLES Y TIEMPO
+# 1. FUNCIÓN DE CONSTRUCCIÓN DE GRAFO BASADO EN PROMEDIO DE GOLES Y TIEMPO
 # =========================================================================
-def generar_dataset_con_goles_y_lambda(df_base, lmbda):
+def generar_dataset_con_goles_normalizados_y_lambda(df_base, lmbda):
     fecha_referencia = df_base["date"].max()
     df_temp = df_base.copy()
 
-    # Calcular el peso temporal decreciente (Memoria del modelo)
+    # Calcular el peso temporal decreciente
     df_temp["dias"] = (fecha_referencia - df_temp["date"]).dt.days
     df_temp["peso_temporal"] = np.exp(-lmbda * df_temp["dias"])
 
@@ -42,51 +43,92 @@ def generar_dataset_con_goles_y_lambda(df_base, lmbda):
     df_v = df_temp[df_temp["away_score"] > df_temp["home_score"]].copy()
     df_e = df_temp[df_temp["home_score"] == df_temp["away_score"]].copy()
 
-    # --- Victorias Locales ---
-    # El flujo de goles va de Perdedor -> Ganador. 
-    # El peso es (Goles del Ganador) * peso_temporal
+    # --- Victorias Locales (Perdedor -> Ganador) ---
     df_l["origen"] = df_l["away_team"]
     df_l["destino"] = df_l["home_team"]
     df_l["w_f"] = df_l["home_score"] * df_l["peso_temporal"]
 
-    # --- Victorias Visitantes ---
+    # --- Victorias Visitantes (Perdedor -> Ganador) ---
     df_v["origen"] = df_v["home_team"]
     df_v["destino"] = df_v["away_team"]
     df_v["w_f"] = df_v["away_score"] * df_v["peso_temporal"]
 
-    # --- Empates ---
-    # En caso de empate (ej. 2-2), ambos se convirtieron goles.
-    # El flujo va en ambos sentidos ponderado por los goles anotados.
-    # Si fue 0-0, le asignamos un valor mínimo simbólico (ej. 0.5) para que el arco exista.
+    # --- Empates (Doble sentido) ---
     e1 = df_e.copy()
     e1["origen"] = e1["away_team"]
     e1["destino"] = e1["home_team"]
-    e1["w_f"] = np.where(e1["home_score"] > 0, e1["home_score"], 0.5) * e1["peso_temporal"]
+    e1["w_f"] = (
+        np.where(e1["home_score"] > 0, e1["home_score"], 0.5)
+        * e1["peso_temporal"]
+    )
 
     e2 = df_e.copy()
     e2["origen"] = e2["home_team"]
     e2["destino"] = e2["away_team"]
-    e2["w_f"] = np.where(e2["away_score"] > 0, e2["away_score"], 0.5) * e2["peso_temporal"]
-
-    # Consolidar y agrupar todos los arcos de goles
-    df_todos_arcos = pd.concat([df_l, df_v, e1, e2], ignore_index=True)
-    df_g = df_todos_arcos.groupby(["origen", "destino"])["w_f"].sum().reset_index()
-
-    # Construir Grafo Dirigido con NetworkX
-    G = nx.from_pandas_edgelist(
-        df_g, source="origen", target="destino", edge_attr="w_f", create_using=nx.DiGraph()
+    e2["w_f"] = (
+        np.where(e2["away_score"] > 0, e2["away_score"], 0.5)
+        * e2["peso_temporal"]
     )
-    pr_dict = nx.pagerank(G, weight="w_f")
+
+    # Consolidar todos los arcos individuales
+    df_todos_arcos = pd.concat([df_l, df_v, e1, e2], ignore_index=True)
+
+    # --- NUEVO PASO: CALCULAR LA CANTIDAD DE PARTIDOS DISPUTADOS ---
+    # Para saber cuántos partidos jugaron el Equipo A y el Equipo B, ignoramos quién fue origen/destino
+    # Creamos una clave única desordenada para identificar el cruce (Ej: "Boca-River" o "River-Boca" -> siempre igual)
+    df_todos_arcos["cruce_id"] = df_todos_arcos.apply(
+        lambda row: "-".join(sorted([row["origen"], row["destino"]])), axis=1
+    )
+
+    # Contamos cuántas veces aparece cada cruce único (un empate cuenta doble en arcos, por eso dividimos por 2 en el conteo)
+    conteo_cruces = (
+        df_todos_arcos.groupby("cruce_id").size() / 2
+    ).to_dict()  # Cada partido real genera 2 filas si fue empate, o 1 fila si hubo ganador, pero al concatenar empates duplicamos.
+    # Para hacerlo exacto y robusto, mejor contamos los partidos directamente desde el df_base original:
+
+    df_base["cruce_id"] = df_base.apply(
+        lambda row: "-".join(sorted([row["home_team"], row["away_team"]])),
+        axis=1,
+    )
+    partidos_disputados_dict = df_base.groupby("cruce_id").size().to_dict()
+
+    # Agrupamos sumando los pesos temporales de los goles
+    df_g = (
+        df_todos_arcos.groupby(["origen", "destino"])["w_f"]
+        .sum()
+        .reset_index()
+    )
+
+    # Creamos la misma clave en el dataframe agrupado para poder mapear la cantidad de partidos
+    df_g["cruce_id"] = df_g.apply(
+        lambda row: "-".join(sorted([row["origen"], row["destino"]])), axis=1
+    )
+    df_g["partidos_jugados"] = df_g["cruce_id"].map(partidos_disputados_dict)
+
+    # !!! MODIFICACIÓN SOLICITADA !!!
+    # Dividimos los goles ponderados acumulados por la cantidad de partidos disputados entre ambos
+    df_g["weight"] = df_g["w_f"] / df_g["partidos_jugados"]
+
+    # Construir Grafo Dirigido con NetworkX usando la columna 'weight' ya normalizada
+    G = nx.from_pandas_edgelist(
+        df_g,
+        source="origen",
+        target="destino",
+        edge_attr="weight",
+        create_using=nx.DiGraph(),
+    )
+    pr_dict = nx.pagerank(G, weight="weight")
 
     # Mapear PageRank a escala ELO (* 10,000)
     media_pr = np.mean(list(pr_dict.values()))
     elo_map = {k: (v * 10000) for k, v in pr_dict.items()}
 
-    # Asignar los ELOS basados en goles al DataFrame de trabajo
+    # Asignar los ELOS al DataFrame temporal de salida
     df_temp["elo_home"] = df_temp["home_team"].map(elo_map).fillna(media_pr * 10000)
     df_temp["elo_away"] = df_temp["away_team"].map(elo_map).fillna(media_pr * 10000)
 
     return df_temp, elo_map
+
 
 
 # =========================================================================
@@ -129,7 +171,7 @@ def run_pipeline():
 
 # Correctly goes up one level, then into data/processed/
     INPUT_FILE = os.path.join(SCRIPT_DIR, "..", "data", "processed", "results.parquet")
-    MODEL_OUTPUT = Path(os.path.join(SCRIPT_DIR, "..", "saved_models", "CPR_model_v1.pkl"))
+    MODEL_OUTPUT = Path(os.path.join(SCRIPT_DIR, "..", "saved_models", "CPR_model_v2.pkl"))
     MODEL_OUTPUT.parent.mkdir(exist_ok=True)
 
     # 2. Load and Prepare
@@ -141,7 +183,7 @@ def run_pipeline():
     df['h_id'] = df['home_team'].map(team_to_id)
     df['a_id'] = df['away_team'].map(team_to_id)
     
-    TRAIN_END = 21715
+    TRAIN_END = 24165
     data_array = df.iloc[:TRAIN_END][['h_id', 'a_id', 'home_score', 'away_score']].values.astype(int)
     
     # 3. Optimize
@@ -151,7 +193,7 @@ def run_pipeline():
     
     # Definimos la grilla de búsqueda para encontrar el lambda óptimo
     lambdas_grid = [0.0001, 0.0005, 0.001, 0.0015, 0.002, 0.003, 0.005]
-    lambdas_grid = np.linspace(0.000001, 0.0001, 10)
+    lambdas_grid = np.linspace(0.00000001, 0.0001, 10)
     
     mejor_rps_global = np.inf
     mejores_params_internos = None
@@ -163,7 +205,7 @@ def run_pipeline():
     
     for lmbda_candidato in lambdas_grid:
         # A. Construir el grafo de goles y obtener los ELOS para este lambda
-        df_con_goles, CPR_dict = generar_dataset_con_goles_y_lambda(df, lmbda_candidato)
+        df_con_goles, CPR_dict = generar_dataset_con_goles_normalizados_y_lambda(df, lmbda_candidato)
     
         # B. Optimizar las perillas de la ecuación de predicción (divisor, c, w)
         initial_guess = [400.0, 50.0, 80.0]
