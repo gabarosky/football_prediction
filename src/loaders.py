@@ -5,20 +5,20 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def load_elo():
     return joblib.load(
-        ROOT / "saved_models" / "elo_model_v1.pkl"
+        ROOT / "saved_models" / "elo_model_v2.pkl"
     )
 
 def load_dc():
     return joblib.load(
-        ROOT / "saved_models" / "dixoncoles_model_v1.pkl"
+        ROOT / "saved_models" / "dixoncoles_model_v2.pkl"
     )
 
 def load_cpr():
     return joblib.load(
-        ROOT / "saved_models" / "CPR_model_v1.pkl"
+        ROOT / "saved_models" / "CPR_model_v2.pkl"
     )
 
 def load_dpop():
     return joblib.load(
-        ROOT / "saved_models" / "DPOP_model_v1.pkl"
+        ROOT / "saved_models" / "DPOP_model_v2.pkl"
     )
